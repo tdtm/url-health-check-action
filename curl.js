@@ -1,88 +1,67 @@
+import axios from "axios"
 import * as core from "@actions/core";
-import { exec, getExecOutput } from "@actions/exec";
-import * as path from "path";
-import * as os from "os";
-import * as semver from "semver";
 
-export async function curl(
-  url,
-  { maxAttempts, retryDelaySeconds, retryAll, followRedirect, cookie, basicAuth }
+export async function checkURLWithRetry(
+    url, searchString, searchNotString, retries, retryDelay, basicAuthString, followRedirect, retryAll, cookie, useExponentialBackoff
 ) {
-  const options = ["--fail", "-sv"];
-  if (maxAttempts > 1) {
-    options.push(
-      "--retry",
-      `${maxAttempts}`,
-      "--retry-delay",
-      `${retryDelaySeconds}`,
-      "--retry-connrefused"
-    );
-  }
-  if (followRedirect) {
-    options.push("-L");
-  }
-  if (retryAll) {
-    options.push("--retry-all-errors");
-  }
-  if(cookie) {
-    options.push("--cookie", `${cookie}`);
-  }
-  if(basicAuth) {
-    options.push("-u", `${basicAuth}`);
-  }
+    let retryCount = 0;
+    let config = {
+        maxRedirects: followRedirect ? 30 : 0, // set a max to avoid infinite redirects, but that's arbitrary. todo make this an option.
+        headers: {},
+    };
 
-  options.push(url);
+    if (basicAuthString) {
+        const base64Credentials = Buffer.from(basicAuthString).toString('base64');
+        config.headers.Authorization = `Basic ${base64Credentials}`
+    }
 
-  core.info(`Checking ${url}`);
-  core.debug(`Command: curl ${options.join(" ")}`);
+    if (cookie) {
+        config.withCredentials = true
+        config.headers.Cookie = cookie
+    }
 
-  return exec("curl", options);
-}
+    async function makeRequest() {
+        const response = await axios.get(url, config);
+        let passing  = true
 
-export async function isVersion(atLeast) {
-  const curlVersionOutput = await getExecOutput("curl --version");
-  const rawVersion = curlVersionOutput.stdout.match(/curl (\d+\.\d+\.\d+)/)[1];
-  const installed = semver.clean(rawVersion);
-  return semver.gte(installed, atLeast);
-}
+        if (response.status === 200) {
+            core.info(`Target ${url} returned a success status code.`);
 
-export async function upgrade() {
-  const upgrader = {
-    linux: {
-      exec: async () => {
-        const binDir = path.join(os.homedir(), ".bin");
-        const curlPath = path.join(binDir, "curl");
-        // From https://curl.se/download.html#Linux
-        const curlUrl = `https://github.com/moparisthebest/static-curl/releases/download/v7.78.0/curl-amd64`;
-        await exec("mkdir", ["-p", binDir]);
-        await exec("wget", ["-O", curlPath, curlUrl]);
-        await exec("chmod", ["+x", curlPath]);
-        core.addPath(binDir);
-      },
-    },
-    win32: {
-      exec: async () => {
-        await exec("choco", ["install", "curl"]);
-        // If this is the first time chocolatey is run, it won't be in the PATH.
-        // It sounds like a runner setup issue, to be fair, but we still need it to work.
-        core.addPath("C:\\ProgramData\\chocolatey\\bin");
-      },
-    },
-    darwin: {
-      exec: async () => {
-        await exec("brew", ["install", "curl"]);
-      },
-    },
-  };
+            if (passing && searchString) {
+                if (!response.data.includes(searchString)) {
+                    core.error(`Target ${url} did not contain the desired string.`);
+                    passing = false;
+                }
 
-  const platformUpgrader = upgrader[process.platform];
-  if (!platformUpgrader) {
-    throw new Error(
-      `Unsupported platform: ${
-        process.platform
-      }, supported platforms: ${Object.keys(upgrader).join(", ")}`
-    );
-  }
+                core.info(`Target ${url} did contain the desired string.`);
+            }
 
-  await platformUpgrader.exec();
+            if (passing && searchNotString) {
+                if (response.data.includes(searchNotString)) {
+                    core.error(`Target ${url} did contain the undesired string.`);
+                    passing = false;
+                }
+
+                core.info(`Target ${url} did not contain the undesired string.`);
+            }
+
+            if (passing) {
+                return true
+            }
+        } else {
+            core.error(`Target ${url} returned a non-200 status code: ${response.status}`);
+        }
+
+        if (retryCount < retries) {
+            retryCount++;
+            const delay = Math.pow(useExponentialBackoff ? 2 : 1, retryCount) * retryDelay;
+            core.info(`Retrying in ${delay} ms... (Attempt ${retryCount}/${retries})`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return makeRequest();
+        }
+
+        throw new Error(`Max retries reached.`);
+    }
+
+    return makeRequest();
 }

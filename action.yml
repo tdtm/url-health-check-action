@@ -17,6 +17,10 @@ inputs:
     description: Follow redirected location in case request resulted in 3XX status code
     required: false
     default: "false"
+  exponential-backoff:
+    description: Retry with exponential backoff (true) or at regular intervals (false).
+    required: false
+    default: "false"
   retry-all:
     description: |
       Retry all errors, including 4xx (see man curl on --retry-all-errors).
@@ -33,6 +37,16 @@ inputs:
     description: |
       Basic auth login password pair.
       Format: `login:password`
+    required: false
+    default: ""
+  contains:
+    description: |
+      String that must be present in the body at the target URL.
+    required: false
+    default: ""
+  contains-not:
+    description: |
+      String that must not be present in the body at the target URL.
     required: false
     default: ""
 branding:

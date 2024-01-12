@@ -1,14 +1,12 @@
 import * as core from "@actions/core";
 import duration from "duration-js";
 import {
-  curl,
-  upgrade as upgradeCurl,
-  isVersion as isCurlVersion,
+  checkURLWithRetry,
 } from "./curl";
 
 process.on("unhandledRejection", (reason) => {
   if (reason instanceof Error) {
-    core.error(reason.stack); // Because Github won't print it otherwise
+    core.error(reason.stack); // Because GitHub won't print it otherwise
     core.setFailed(reason);
   } else {
     core.setFailed(`${reason}`);
@@ -18,42 +16,29 @@ process.on("unhandledRejection", (reason) => {
 async function run() {
   const urlString = core.getInput("url", { required: true });
   const maxAttemptsString = core.getInput("max-attempts");
-  const retryDelay = core.getInput("retry-delay");
+  const retryDelayString = core.getInput("retry-delay");
   const followRedirect = core.getBooleanInput("follow-redirect");
+  const useExponentialBackoff = core.getBooleanInput("exponential-backoff");
   const retryAll = core.getBooleanInput("retry-all");
   const cookie = core.getInput("cookie");
-  const basicAuth = core.getInput("basic-auth");
+  const basicAuthString = core.getInput("basic-auth");
+  const searchString = core.getInput("contains");
+  const searchNotString = core.getInput("contains-not");
 
   const urls = urlString.split("|");
-  const retryDelaySeconds = duration.parse(retryDelay).seconds();
-  const maxAttempts = parseInt(maxAttemptsString);
-
-  if (retryAll) {
-    const isUpToDate = await isCurlVersion("7.71.0");
-    if (!isUpToDate) {
-      core.warning(
-        "The installed version of curl does not support retry-all-errors. " +
-          "It will be upgraded automatically. If you don't want this to happen, you need to either " +
-          "upgrade it manually, or turn off retry-all."
-      );
-      await upgradeCurl();
-    }
-  }
+  const retryDelayMs = duration.parse(retryDelayString).milliseconds();
+  const maxAttempts = parseInt(maxAttemptsString) - 1;
 
   for (const url of urls) {
     // We don't need to do it in parallel, we're going to have to
     // wait for all of them anyway
-    await curl(url, {
-      maxAttempts,
-      retryDelaySeconds,
-      retryAll,
-      followRedirect,
-      cookie,
-      basicAuth
-    });
+    await checkURLWithRetry(
+        url, searchString, searchNotString, maxAttempts, retryDelayMs, basicAuthString, followRedirect, retryAll, cookie, useExponentialBackoff
+    );
   }
 
-  core.info("Success");
+  // If we reach this without running into an error
+  core.info("All URL checks succeeded.");
 }
 
 run().catch((e) => {

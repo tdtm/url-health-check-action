@@ -105,3 +105,35 @@ jobs:
         with:
           url: https://postman-echo.com/basic-auth
           basic-auth: "postman:password"
+
+  check-single-contains-no-redirect:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+    name: Check single, no redirect, with contains
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./
+        with:
+          url: https://postman-echo.com/status/200
+          contains: '"status": 200"'
+
+  expect-failure-check-single-not-contains-no-redirect:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+    name: Check single, no redirect, with contains NOT
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./
+        with:
+          url: https://postman-echo.com/status/200
+          not-contains: '"status": 200'

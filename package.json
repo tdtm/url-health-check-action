@@ -1,12 +1,13 @@
 {
   "name": "url-health-check",
-  "version": "2.0.0",
-  "description": "Health check URLs with curl",
+  "version": "3.0.0",
+  "description": "Health check URLs with curl, with content checks",
   "main": "dist/index.js",
   "scripts": {
     "dev": "ncc build --watch index.js",
     "build": "ncc build index.js",
-    "lint": "prettier --check . && eslint"
+    "lint": "prettier --check . && eslint",
+    "pretty": "prettier . && eslint"
   },
   "author": "",
   "license": "MIT",
@@ -15,8 +16,8 @@
     "@actions/exec": "^1.1.1",
     "@actions/github": "^5.1.1",
     "@vercel/ncc": "^0.34.0",
-    "duration-js": "^4.0.0",
-    "semver": "^7.5.2"
+    "axios": "^1.6.5",
+    "duration-js": "^4.0.0"
   },
   "devDependencies": {
     "eslint": "^8.26.0",
