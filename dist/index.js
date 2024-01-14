@@ -35073,20 +35073,20 @@ async function checkURLWithRetry(
 
             if (passing && searchString) {
                 if (!response.data.includes(searchString)) {
-                    core.error(`Target ${url} did not contain the desired string.`);
+                    core.error(`Target ${url} did not contain the desired string "${searchString}".`);
                     passing = false;
                 }
 
-                core.info(`Target ${url} did contain the desired string.`);
+                core.info(`Target ${url} did contain the desired string "${searchString}".`);
             }
 
             if (passing && searchNotString) {
                 if (response.data.includes(searchNotString)) {
-                    core.error(`Target ${url} did contain the undesired string.`);
+                    core.error(`Target ${url} did contain the undesired string "${searchNotString}".`);
                     passing = false;
                 }
 
-                core.info(`Target ${url} did not contain the undesired string.`);
+                core.info(`Target ${url} did not contain the undesired string "${searchNotString}".`);
             }
 
             if (passing) {
