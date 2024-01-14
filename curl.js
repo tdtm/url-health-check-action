@@ -5,6 +5,7 @@ export async function checkURLWithRetry(
     url, searchString, searchNotString, retries, retryDelay, basicAuthString, followRedirect, retryAll, cookie, useExponentialBackoff
 ) {
     let retryCount = 0;
+    let cumulativeDelay = 0;
     let config = {
         maxRedirects: followRedirect ? 30 : 0, // set a max to avoid infinite redirects, but that's arbitrary. todo make this an option.
         headers: {},
@@ -46,6 +47,7 @@ export async function checkURLWithRetry(
             }
 
             if (passing) {
+                core.info(`Succeeded after ${retryCount+1} tries (${retryCount} retries), waited ${cumulativeDelay}ms in total.`)
                 return true
             }
         } else {
@@ -55,6 +57,7 @@ export async function checkURLWithRetry(
         if (retryCount < retries) {
             retryCount++;
             const delay = Math.pow(useExponentialBackoff ? 2 : 1, retryCount) * retryDelay;
+            cumulativeDelay += delay;
             core.info(`Retrying in ${delay} ms... (Attempt ${retryCount}/${retries})`);
             await new Promise(resolve => setTimeout(resolve, delay));
             return makeRequest();
