@@ -1,6 +1,11 @@
 # URL health check action
 
-A cURL-based post-deploy health check with build-in redirect & retry. A quick & easy way to verify a deployment. Modified from jtalk/url-health-check-action@v3.
+A post-deploy health check with built-in redirect, retry, and text match. A quick & easy way to verify a deployment. 
+
+Modified from jtalk/url-health-check-action@v3. Keept the same options, but re-written using Axios and adding support for the following options:
+- contains
+- contains-not
+- exponential backoff
 
 ```yaml
 steps:
@@ -30,4 +35,4 @@ steps:
       contains-not: "error" # Optional, default is empty
 ```
 
-The action will fail if any of the URLs reports either 4xx or 5xx status codes.
+The action will fail if any of the URLs reports either 4xx or 5xx status codes, or the `contains`/`contains-not` checks (if enabled) are not satisfied, once all `max-attempts` have been exhausted.
