@@ -17,7 +17,9 @@ export async function checkURLWithRetry(
   let cumulativeDelay = 0
   let config = {
     maxRedirects: followRedirect ? 30 : 0, // set a max to avoid infinite redirects, but that's arbitrary. todo make this an option.
-    headers: {}
+    headers: {},
+    // Redirects are legitimate, non-error statuses. 4xx and 5xx are errors.
+    validateStatus: (status) => status >= 200 && status < 400
   }
 
   if (basicAuthString) {
