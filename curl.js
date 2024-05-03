@@ -18,8 +18,10 @@ export async function checkURLWithRetry(
   let config = {
     maxRedirects: followRedirect ? 30 : 0, // set a max to avoid infinite redirects, but that's arbitrary. todo make this an option.
     headers: {},
-    // Redirects are legitimate, non-error statuses. 4xx and 5xx are errors.
-    validateStatus: (status) => status >= 200 && status < 400
+    // Never throw on failure. Keep retrying as long as we still have retries left.
+    validateStatus: () => true,
+    // Don't parse the response if it's JSON etc. Always return as a string.
+    transformResponse: (r) => r
   }
 
   if (basicAuthString) {
@@ -40,7 +42,7 @@ export async function checkURLWithRetry(
       core.info(`Target ${url} returned a success status code.`)
 
       if (passing && searchString) {
-        if (!response.data.includes(searchString)) {
+        if (!(typeof response.data === 'string' && response.data.includes(searchString))) {
           core.error(`Target ${url} did not contain the desired string "${searchString}".`)
           passing = false
         }

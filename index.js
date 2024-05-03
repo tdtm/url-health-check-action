@@ -49,5 +49,12 @@ async function run() {
 }
 
 run().catch((e) => {
-  core.setFailed(e)
+  // Mostly intended to test the action. When true, this reports success as failure and vice versa.
+  let expectFailure = core.getBooleanInput('expect-failure')
+
+  if (expectFailure) {
+    core.info('The check failed as expected.')
+  } else {
+    core.setFailed(e)
+  }
 })
