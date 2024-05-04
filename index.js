@@ -11,18 +11,20 @@ process.on('unhandledRejection', (reason) => {
   }
 })
 
-async function run() {
-  const urlString = core.getInput('url', { required: true })
-  const maxAttemptsString = core.getInput('max-attempts')
-  const retryDelayString = core.getInput('retry-delay')
-  const followRedirect = core.getBooleanInput('follow-redirect')
-  const useExponentialBackoff = core.getBooleanInput('exponential-backoff')
-  const retryAll = core.getBooleanInput('retry-all')
-  const cookie = core.getInput('cookie')
-  const basicAuthString = core.getInput('basic-auth')
-  const searchString = core.getInput('contains')
-  const searchNotString = core.getInput('contains-not')
+// Mostly intended to test the action. When true, this reports success as failure and vice versa.
+const expectFailure = core.getBooleanInput('expect-failure')
+const urlString = core.getInput('url', { required: true })
+const maxAttemptsString = core.getInput('max-attempts')
+const retryDelayString = core.getInput('retry-delay')
+const followRedirect = core.getBooleanInput('follow-redirect')
+const useExponentialBackoff = core.getBooleanInput('exponential-backoff')
+const retryAll = core.getBooleanInput('retry-all')
+const cookie = core.getInput('cookie')
+const basicAuthString = core.getInput('basic-auth')
+const searchString = core.getInput('contains')
+const searchNotString = core.getInput('contains-not')
 
+async function run() {
   const urls = urlString.split('|')
   const retryDelayMs = duration.parse(retryDelayString).milliseconds()
   const maxAttempts = parseInt(maxAttemptsString) - 1
@@ -49,9 +51,6 @@ async function run() {
 }
 
 run().catch((e) => {
-  // Mostly intended to test the action. When true, this reports success as failure and vice versa.
-  let expectFailure = core.getBooleanInput('expect-failure')
-
   if (expectFailure) {
     core.info('The check failed as expected.')
   } else {
