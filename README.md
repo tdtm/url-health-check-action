@@ -35,4 +35,4 @@ steps:
       contains-not: "error" # Optional, default is empty
 ```
 
-The action will fail if any of the URLs reports either 4xx or 5xx status codes, or the `contains`/`contains-not` checks (if enabled) are not satisfied, once all `max-attempts` have been exhausted.
+The action will fail if once all `max-attempts` have been exhausted, any of the URLs reports either 4xx or 5xx status codes, or the `contains`/`contains-not` checks (if enabled) are not satisfied. A target is considered passing as soon as it passes once.
